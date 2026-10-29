@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bondiolas Wiki: Edición Contrarreloj</title>
+<style>
+  :root{--bg:#1a1c22;--panel:#fff;--ink:#202122;--acc:#c8102e;--blue:#3366cc;--muted:#72777d}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Linux Libertine",Georgia,serif;background:var(--bg);color:var(--ink)}
+  header{background:#0e0f13;color:#fff;padding:10px 16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-family:system-ui,sans-serif;position:sticky;top:0;z-index:5}
+  header b{color:#ffb000}
+  .stat{background:#2a2d36;padding:6px 10px;border-radius:6px;font-size:14px}
+  #timer.low{background:var(--acc)}
+  main{max-width:1000px;margin:16px auto;background:var(--panel);padding:20px 28px;border-radius:4px}
+  h1{font-weight:normal;border-bottom:1px solid #a2a9b1;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;font-family:system-ui;margin-bottom:12px}
+  h2{font-weight:normal;border-bottom:1px solid #a2a9b1;margin-top:22px}
+  .infobox{float:right;width:260px;border:1px solid #a2a9b1;background:#f8f9fa;margin:0 0 12px 16px;font-size:14px;font-family:system-ui}
+  .infobox caption{font-weight:bold;padding:6px;background:#ffb000}
+  .infobox .img{height:120px;display:flex;align-items:center;justify-content:center;font-size:64px;background:#fdf2e0}
+  .infobox td{padding:4px 6px;vertical-align:top;border-top:1px solid #eaecf0}
+  .infobox td:first-child{font-weight:bold;width:40%}
+  p{line-height:1.6}
+  .blank{display:inline-block;min-width:90px;border-bottom:2px dashed var(--blue);color:var(--blue);cursor:pointer;padding:0 4px;font-family:system-ui;font-size:.85em;text-align:center;transition:.2s}
+  .blank.sel{background:#dbe6ff;border-bottom-style:solid}
+  .blank.filled{border:none;color:var(--ink);font-family:inherit;font-size:1em;min-width:0}
+  .blank.ok{background:#e6f7e6}
+  .blank.bad{background:#ffe9e9}
+  .blank.vandal{animation:shake .4s 3}
+  sup.cn{color:var(--blue);font-size:11px;font-family:system-ui}
+  @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+  #handWrap{position:sticky;bottom:0;background:#0e0f13;padding:10px;font-family:system-ui;z-index:5}
+  #hand{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;max-width:1000px;margin:auto}
+  .card{background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer;min-width:120px;box-shadow:0 3px 0 #999;transition:.15s;user-select:none}
+  .card:hover{transform:translateY(-4px)}
+  .card small{display:block;font-size:10px;font-weight:bold;letter-spacing:1px}
+  .controls{text-align:center;margin-top:8px}
+  button{font-family:system-ui;background:#ffb000;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:bold}
+  button.sec{background:#444;color:#fff}
+  #toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:var(--acc);color:#fff;padding:10px 18px;border-radius:8px;font-family:system-ui;font-weight:bold;opacity:0;transition:.3s;pointer-events:none;z-index:9}
+  #toast.show{opacity:1}
+  #overlay{position:fixed;inset:0;background:#000c;display:flex;align-items:center;justify-content:center;z-index:10;font-family:system-ui}
+  .modal{background:#fff;max-width:480px;padding:24px;border-radius:10px;text-align:center}
+  .modal h2{border:none;margin-top:0}
+  .hidden{display:none!important}
+  .c-PER{color:#8e24aa}.c-LUG{color:#00897b}.c-FEC{color:#e65100}.c-COS{color:#6d4c41}.c-ADJ{color:#1e88e5}.c-VER{color:#c62828}.c-NUM{color:#558b2f}
+</style>
+</head>
+<body>
+
+<header>
+  <span>🥪 <b>Bondiolas Wiki</b> · Edición Contrarreloj</span>
+  <span class="stat" id="timer">⏱ 90</span>
+  <span class="stat">Puntos: <b id="score">0</b></span>
+  <span class="stat">Combo: <b id="combo">x1</b></span>
+  <span class="stat" id="buff"></span>
+  <span class="stat">Semilla: <span id="seedLbl"></span></span>
+</header>
+
+<main id="article"></main>
+
+<div id="handWrap">
+  <div id="hand"></div>
+  <div class="controls">
+    <button class="sec" id="discard">🔄 Cambiar mano (−30)</button>
+    <button class="sec" id="newGame">🎲 Nueva partida</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div id="overlay">
+  <div class="modal" id="modal">
+    <h2>🥪 Bondiolas Wiki</h2>
+    <p>El artículo sobre <b>Bondiolas</b> está casi vacío y los editores se fueron a comer.<br>
+    Rellená los huecos con las cartas antes de que se termine el tiempo.</p>
+    <p style="font-size:14px;text-align:left">
+      • Tocá un hueco y después una carta (o tocá la carta y va sola al hueco que le corresponde).<br>
+      • Carta del tipo correcto = puntos y combo.<br>
+      • Carta equivocada = queda escrita, pero aparece un <i>[cita requerida]</i>.<br>
+      • Ojo con los vandalismos, los bots y los admins.
+    </p>
+    <button id="start">Empezar a editar</button>
+  </div>
+</div>
+
+<script>
+/* ====== CONTENIDO EDITABLE ====== */
+const CATS = {PER:"PERSONAJE",LUG:"LUGAR",FEC:"FECHA",COS:"COSA",ADJ:"ADJETIVO",VER:"VERBO",NUM:"NÚMERO"};
+const POOLS = {
+  PER:["el Tano Bondiolas","Doña Chimi","el Pibe Brasa","Marta la Parrillera","el Gordo Choripán","Sir Bondiolín III","la Abuela Provoleta","el Ingeniero Matambre","un tal Ricardo","el Comité del Pan"],
+  LUG:["Villa Crespo","una parrilla de Mataderos","la Costanera Sur","Chivilcoy","un food truck en Rosario","el Obelisco","una cancha de Lanús","el sótano de un kiosco","Mar del Plata","una terraza en Caballito"],
+  FEC:["1983","un domingo de 1997","la madrugada de 2004","el verano de 2011","el 25 de mayo de 1950","2019","un feriado puente de 2008","la Navidad de 1976"],
+  COS:["un pan de campo","chimichurri casero","una garrafa","un fernet tibio","la receta secreta","una pinza oxidada","provoleta derretida","un mate lavado","una salsa criolla","un cuchillo heredado"],
+  ADJ:["legendario","polémico","crocante","jugoso","misterioso","grasoso","épico","sospechoso","sagrado","ilegal"],
+  VER:["fundó","asó","prohibió","reinventó","robó","bendijo","vendió","olvidó","patentó","escondió"],
+  NUM:["3","47","1.200","dos millones de","12","99","500","7"]
+};
+const TITLES = ["Bondiolas","Bondiolas (fenómeno)","Bondiolas (desambiguación)","Bondiolas: la saga","Bondiolas (cultura popular)"];
+const EMOJIS = ["🥪","🐖","🔥","🍖","🧂","🥖"];
+const INTRO = [
+  "Las <b>Bondiolas</b> son un fenómeno {ADJ} que nació en {LUG} y que hoy tiene más de {NUM} seguidores.",
+  "<b>Bondiolas</b> es el nombre de un movimiento {ADJ} iniciado por {PER} en {FEC}."
+];
+const SECTIONS = {
+  "Origen":[
+    "Todo empezó en {FEC}, cuando {PER} {VER} {COS} en {LUG}.",
+    "Según la tradición oral, {PER} encontró {COS} abandonado en {LUG} y lo {VER} sin pensarlo dos veces."
+  ],
+  "Historia":[
+    "En {FEC} el movimiento se volvió {ADJ}: {PER} {VER} más de {NUM} sánguches en una sola noche.",
+    "Las autoridades de {LUG} intentaron frenarlo, pero {PER} {VER} {COS} frente a todos."
+  ],
+  "Receta":[
+    "La receta oficial lleva {COS}, {COS} y un toque {ADJ} que solo conoce {PER}.",
+    "Hay que cocinarla {NUM} horas, preferentemente en {LUG}, y servirla con {COS}."
+  ],
+  "Controversias":[
+    "En {FEC} estalló un escándalo {ADJ} cuando {PER} fue acusado de que {VER} {COS}.",
+    "Algunos historiadores sostienen que en realidad fue {PER} quien {VER} la primera bondiola en {LUG}."
+  ],
+  "Legado":[
+    "Hoy en {LUG} se celebra el Día de la Bondiola, con {NUM} parrillas encendidas al mismo tiempo.",
+    "Su legado {ADJ} sigue vivo: cada vez que alguien {VER} {COS}, se acuerda de {PER}."
+  ],
+  "Curiosidades":[
+    "Se dice que {PER} guarda {COS} bajo llave en {LUG}.",
+    "El récord mundial es de {NUM} bondiolas, establecido en {FEC}."
+  ]
+};
+const INFOBOX = [["Creador","PER"],["Origen","LUG"],["Fundación","FEC"],["Ingrediente clave","COS"],["Estado","ADJ"]];
+
+/* ====== MOTOR ====== */
+const $ = s => document.querySelector(s);
+function mulberry(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+let R, seed, blanks, hand, sel, score, combo, time, timerId, mult, multUntil, nextEvent, running;
+const pick = a => a[Math.floor(R()*a.length)];
+const shuffle = a => {for(let i=a.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+
+function parse(tpl){
+  return tpl.replace(/\{(\w+)\}/g,(_,c)=>{
+    const i = blanks.length; blanks.push({cat:c,val:null,ok:false});
+    return `<span class="blank" data-i="${i}">${CATS[c]}</span>`;
+  });
+}
+
+function build(){
+  blanks=[];
+  const title = pick(TITLES);
+  let html = `<h1>${title}</h1><div class="sub">De Bondiolas Wiki, la enciclopedia que se escribe sola (más o menos)</div>`;
+  html += `<table class="infobox"><caption>${title}</caption><tr><td colspan="2" class="img">${pick(EMOJIS)}</td></tr>`;
+  shuffle([...INFOBOX]).slice(0,4).forEach(([k,c])=> html += `<tr><td>${k}</td><td>${parse("{"+c+"}")}</td></tr>`);
+  html += `</table><p>${parse(pick(INTRO))}</p>`;
+  const secs = shuffle(Object.keys(SECTIONS)).slice(0, 3 + Math.floor(R()*2));
+  secs.forEach(s=>{
+    html += `<h2>${s}</h2>`;
+    const tpls = shuffle([...SECTIONS[s]]);
+    html += `<p>${parse(tpls[0])}${R()<.4 ? " "+parse(tpls[1]) : ""}</p>`;
+  });
+  $("#article").innerHTML = html;
+  document.querySelectorAll(".blank").forEach(b=>b.onclick=()=>selectBlank(+b.dataset.i));
+}
+
+function drawCard(){
+  const empty = blanks.filter(b=>!b.val).map(b=>b.cat);
+  const cat = (empty.length && R()<.7) ? pick(empty) : pick(Object.keys(CATS));
+  return {cat, val:pick(POOLS[cat])};
+}
+function dealHand(){ hand = Array.from({length:5}, drawCard); renderHand(); }
+function renderHand(){
+  $("#hand").innerHTML = hand.map((c,i)=>`<div class="card" data-i="${i}"><small class="c-${c.cat}">${CATS[c.cat]}</small>${c.val}</div>`).join("");
+  document.querySelectorAll(".card").forEach(el=>el.onclick=()=>playCard(+el.dataset.i));
+}
+
+function selectBlank(i){
+  if(!running || blanks[i].val) return;
+  sel = i;
+  document.querySelectorAll(".blank").forEach(b=>b.classList.toggle("sel", +b.dataset.i===i));
+}
+
+function playCard(ci){
+  if(!running) return;
+  const card = hand[ci];
+  let target = (sel!=null && !blanks[sel].val) ? sel : -1;
+  if(target<0) target = blanks.findIndex(b=>!b.val && b.cat===card.cat);
+  if(target<0) target = blanks.findIndex(b=>!b.val);
+  if(target<0) return;
+  fill(target, card.val, card.cat===blanks[target].cat);
+  hand[ci] = drawCard(); renderHand(); sel=null;
+  if(blanks.every(b=>b.val)) end(true);
+}
+
+function fill(i, val, ok, silent){
+  const b = blanks[i]; b.val=val; b.ok=ok;
+  const el = document.querySelector(`.blank[data-i="${i}"]`);
+  el.className = "blank filled " + (ok?"ok":"bad");
+  el.innerHTML = val + (ok ? "" : '<sup class="cn">[cita requerida]</sup>');
+  if(silent) return;
+  if(ok){ score += 100*combo*mult; combo=Math.min(combo+1,8); }
+  else { score += 20; combo=1; }
+  updateHUD();
+}
+
+function updateHUD(){
+  $("#score").textContent = score;
+  $("#combo").textContent = "x"+combo;
+  $("#timer").textContent = "⏱ "+time;
+  $("#timer").classList.toggle("low", time<=15);
+  $("#buff").textContent = mult>1 ? `⭐ x${mult} (${multUntil-(90-time)}s)` : "📝 Editando";
+}
+
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2200); }
+
+const EVENTS = [
+  ()=>{ const f=blanks.map((b,i)=>b.val&&b.ok?i:-1).filter(i=>i>=0); if(!f.length) return false;
+        const i=pick(f); const el=document.querySelector(`.blank[data-i="${i}"]`);
+        blanks[i].val=null; blanks[i].ok=false; el.className="blank vandal"; el.textContent=CATS[blanks[i].cat];
+        score=Math.max(0,score-50); toast("🚨 ¡Vandalismo! Alguien borró una edición (−50)"); return true; },
+  ()=>{ mult=2; multUntil=(90-time)+10; toast("⭐ ¡Un admin te dio una estrella! Puntos x2 por 10 s"); return true; },
+  ()=>{ dealHand(); combo=1; toast("⚔️ ¡Conflicto de edición! Se mezcló tu mano"); return true; },
+  ()=>{ const e=blanks.map((b,i)=>!b.val?i:-1).filter(i=>i>=0); if(!e.length) return false;
+        const i=pick(e); fill(i, pick(POOLS[blanks[i].cat]), true, true); toast("🤖 BondiBot completó un hueco por vos"); return true; },
+  ()=>{ time+=8; toast("☕ Los moderadores se fueron a comer: +8 segundos"); return true; },
+  ()=>{ blanks.forEach((b,i)=>{ if(b.val&&!b.ok){ fill(i,b.val,false,true);} }); score+=0;
+        const bad=blanks.filter(b=>b.val&&!b.ok).length; score=Math.max(0,score-bad*25);
+        toast(bad?`📚 Revisión de fuentes: −${bad*25} por citas faltantes`:"📚 Revisión de fuentes: ¡todo en orden!"); return true; }
+];
+
+function tick(){
+  time--;
+  const elapsed = 90-time;
+  if(mult>1 && elapsed>=multUntil) mult=1;
+  if(elapsed>=nextEvent){ let ok=false, tries=0; while(!ok && tries++<5) ok=pick(EVENTS)(); nextEvent = elapsed + 10 + Math.floor(R()*8); }
+  updateHUD();
+  if(time<=0) end(false);
+}
+
+function end(done){
+  running=false; clearInterval(timerId);
+  const total=blanks.length, ok=blanks.filter(b=>b.ok).length, filled=blanks.filter(b=>b.val).length;
+  if(done) score += time*15;
+  const pct = ok/total;
+  const rank = pct>.9?"🏆 Artículo Destacado":pct>.7?"🥇 Artículo Bueno":pct>.4?"📄 Esbozo aceptable":"🗑️ Propuesto para borrado";
+  $("#modal").innerHTML = `<h2>${done?"¡Artículo completado!":"⏰ ¡Se acabó el tiempo!"}</h2>
+    <p style="font-size:22px">${rank}</p>
+    <p>Puntos: <b>${score}</b><br>Huecos correctos: ${ok}/${total} · Completados: ${filled}/${total}${done?`<br>Bonus por tiempo: +${time*15}`:""}</p>
+    <p style="font-size:13px">Semilla: <b>${seed}</b>, compartí este link para jugar la misma partida:<br>
+    <input style="width:100%" readonly value="${location.origin+location.pathname}?s=${seed}" onclick="this.select()"></p>
+    <button onclick="document.getElementById('overlay').classList.add('hidden')">Leer el artículo</button>
+    <button onclick="newGame()">🎲 Otra partida</button>`;
+  $("#overlay").classList.remove("hidden");
+}
+
+function init(s){
+  seed = s; R = mulberry(seed); $("#seedLbl").textContent = seed;
+  history.replaceState(null,"","?s="+seed);
+  score=0; combo=1; time=90; mult=1; multUntil=0; sel=null; nextEvent=12; running=false;
+  clearInterval(timerId); build(); dealHand(); updateHUD();
+}
+function start(){ $("#overlay").classList.add("hidden"); running=true; timerId=setInterval(tick,1000); }
+function newGame(){ init(Math.floor(Math.random()*1e6)); start(); }
+
+$("#start").onclick = start;
+$("#newGame").onclick = newGame;
+$("#discard").onclick = ()=>{ if(!running) return; score=Math.max(0,score-30); combo=1; dealHand(); updateHUD(); };
+
+const qs = new URLSearchParams(location.search).get("s");
+init(qs && !isNaN(qs) ? +qs : Math.floor(Math.random()*1e6));
+</script>
+</body>
+</html>
